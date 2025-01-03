@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ball Simulation with Loop</title>
+  <style>
+    /* Reset and base styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #1e1e1e;
+      color: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Canvas styling with gradient background */
+    #simulationCanvas {
+      width: 100%;
+      height: 50vh;
+      background: linear-gradient(to bottom, #2c3e50, #34495e);
+      display: block;
+      position: relative;
+    }
+
+    /* Controls section styling */
+    #controls {
+      width: 100%;
+      height: 50vh;
+      padding: 2rem;
+      background-color: #2c3e50;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      gap: 1.5rem;
+      overflow-y: auto;
+    }
+
+    /* Form group styling */
+    .form-group {
+      width: 80%;
+      max-width: 500px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    label {
+      margin-bottom: 0.5rem;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    input, select, button {
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    input, select {
+      background-color: #34495e;
+      color: #ecf0f1;
+      margin-bottom: 1rem;
+    }
+
+    input::placeholder {
+      color: #bdc3c7;
+    }
+
+    input:focus, select:focus {
+      background-color: #3d566e;
+    }
+
+    button {
+      background-color: #2980b9;
+      color: #ecf0f1;
+      cursor: pointer;
+      margin-right: 1rem;
+      flex: 1;
+    }
+
+    button:hover {
+      background-color: #3498db;
+    }
+
+    /* Button container */
+    .button-group {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      width: 80%;
+      max-width: 500px;
+    }
+
+    /* Scrollbar styling for controls */
+    #controls::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #controls::-webkit-scrollbar-track {
+      background: #34495e;
+    }
+
+    #controls::-webkit-scrollbar-thumb {
+      background-color: #2980b9;
+      border-radius: 4px;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 600px) {
+      #controls {
+        padding: 1rem;
+      }
+
+      .form-group {
+        width: 100%;
+      }
+
+      button {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Canvas for the simulation -->
+  <canvas id="simulationCanvas"></canvas>
+
+  <!-- Controls -->
+  <div id="controls">
+    <div class="form-group">
+      <label for="presetSelect"><strong>Preset:</strong></label>
+      <select id="presetSelect">
+        <option value="Moon">Moon</option>
+        <option value="Earth" selected>Earth</option>
+        <option value="Critical Damping">Critical Damping</option>
+        <option value="Over Damping">Over Damping</option>
+        <option value="Under Damping">Under Damping</option>
+        <option value="Custom">Custom</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="gravityInput"><strong>Gravity (m/s²):</strong></label>
+      <input type="number" id="gravityInput" value="9.8" step="0.01" min="0" />
+    </div>
+
+    <div class="form-group">
+      <label for="restitutionInput"><strong>Coefficient of Restitution (CR):</strong></label>
+      <input type="number" id="restitutionInput" value="0.7" step="0.01" min="0" max="1" />
+    </div>
+
+    <div class="form-group">
+      <label for="velocityInput"><strong>Initial Vertical Velocity (m/s):</strong></label>
+      <input type="number" id="velocityInput" value="15" step="0.01" />
+    </div>
+
+    <div class="button-group">
+      <button id="testBtn">Test</button>
+      <button id="resetBtn">Reset</button>
+      <button id="loopBtn">Loop Off</button>
+    </div>
+  </div>
+
+  <script>
+    /******************************************************
+     *  1) Global Setup
+     ******************************************************/
+    const canvas = document.getElementById("simulationCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Handle high DPI screens
+    function resizeCanvasToDisplaySize(canvas) {
+      const { width, height } = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+      }
+      return { width: canvas.width, height: canvas.height, dpr };
+    }
+
+    // Ball parameters
+    const ball = {
+      x: 0,
+      y: 0,
+      radius: 12, // Don't change
+      vxPercent: 0.1, // horizontal velocity as % of canvas width per frame
+      vy: 0,
+      gravity: 9.8,
+      cor: 0.7,
+      trail: []
+    };
+
+    // Preset configurations
+    const presets = {
+      "Moon":             { gravity: 1.62,  cor: 0.5,  velocity: 4.5 },
+      "Earth":            { gravity: 9.8,   cor: 0.5,  velocity: 10 },
+      "Critical Damping": { gravity: 9.8,   cor: 0.99, velocity: 10 },
+      "Over Damping":     { gravity: 9.8,   cor: 0.01, velocity: 10 },
+      "Under Damping":    { gravity: 9.8,   cor: 0.5,  velocity: 10 }
+    };
+
+    // DOM elements
+    const presetSelect     = document.getElementById("presetSelect");
+    const gravityInput     = document.getElementById("gravityInput");
+    const restitutionInput = document.getElementById("restitutionInput");
+    const velocityInput    = document.getElementById("velocityInput");
+    const testBtn          = document.getElementById("testBtn");
+    const resetBtn         = document.getElementById("resetBtn");
+    const loopBtn          = document.getElementById("loopBtn");
+
+    // Track loop state (on/off)
+    let loopEnabled = false;
+
+    /******************************************************
+     *  2) Helper Functions
+     ******************************************************/
+    // Reads the preset values into the input fields
+    function setInputsFromPreset(presetName) {
+      if (!presets[presetName]) return;
+      gravityInput.value     = presets[presetName].gravity;
+      restitutionInput.value = presets[presetName].cor;
+      velocityInput.value    = presets[presetName].velocity;
+    }
+
+    // If any input changes, select 'Custom'
+    function markPresetAsCustom() {
+      if (presetSelect.value !== "Custom") {
+        presetSelect.value = "Custom";
+      }
+    }
+
+    // Apply preset if it's not "Custom"
+    function applyPreset(presetName) {
+      if (presetName === "Custom") return;
+      setInputsFromPreset(presetName);
+    }
+
+    // Apply the user-input parameters to the ball
+    function applyUserParameters() {
+      ball.gravity = Math.max(0, parseFloat(gravityInput.value));
+      ball.cor     = Math.min(Math.max(0, parseFloat(restitutionInput.value)), 1.0);
+      // **Fix: Set the new velocity instead of adding**
+      ball.vy     = parseFloat(velocityInput.value);
+    }
+
+    // Places the ball at bottom center, sets vy=0, clears trail
+    function placeBallAtBottom() {
+      const { width, height } = resizeCanvasToDisplaySize(canvas);
+      ball.x = width / 2;
+      ball.y = height - ball.radius;
+      ball.vy = 0;
+      ball.trail = [];
+    }
+
+    /******************************************************
+     *  3) Event Listeners
+     ******************************************************/
+    // Preset dropdown
+    presetSelect.addEventListener("change", () => {
+      // Update input fields from chosen preset
+      applyPreset(presetSelect.value);
+      // Immediately apply to the ball (so if loop is on, it uses new values)
+      applyUserParameters();
+    });
+
+    // Mark as "Custom" if user modifies any input
+    gravityInput.addEventListener("input", markPresetAsCustom);
+    restitutionInput.addEventListener("input", markPresetAsCustom);
+    velocityInput.addEventListener("input", markPresetAsCustom);
+
+    // Test button: do one shot with current parameters, disable loop
+    testBtn.addEventListener("click", () => {
+      applyUserParameters();
+      loopEnabled = false;
+      loopBtn.textContent = "Loop Off";
+    });
+
+    // Reset button: place ball at bottom, revert to Earth, apply those parameters
+    resetBtn.addEventListener("click", () => {
+      placeBallAtBottom();
+      presetSelect.value = "Earth";
+      setInputsFromPreset("Earth");
+      applyUserParameters();
+    });
+
+    // Toggle loop on/off
+    loopBtn.addEventListener("click", () => {
+      loopEnabled = !loopEnabled;
+      loopBtn.textContent = loopEnabled ? "Loop On" : "Loop Off";
+    });
+
+    /******************************************************
+     *  4) Animation Loop
+     ******************************************************/
+    function update() {
+      const { width, height } = resizeCanvasToDisplaySize(canvas);
+
+      // Horizontal movement
+      const vx = (ball.vxPercent / 100) * width;
+      ball.x += vx;
+
+      // Wrap horizontally
+      if (ball.x - ball.radius > width) {
+        ball.x = -ball.radius;
+      }
+      if (ball.x + ball.radius < 0) {
+        ball.x = width + ball.radius;
+      }
+
+      // Gravity
+      ball.vy += ball.gravity * 0.016; // ~16ms per frame
+      ball.y += ball.vy;
+
+      // Collision at bottom
+      if (ball.y + ball.radius > height) {
+        ball.y = height - ball.radius;
+        // bounce
+        ball.vy = -ball.vy * ball.cor;
+
+        // If it's very slow, consider "at rest"
+        if (Math.abs(ball.vy) < 0.1) {
+          ball.vy = 0;
+          ball.y = height - ball.radius;
+
+          // If loop is ON, re-launch upward with new velocity
+          if (loopEnabled) {
+            // Use the *current* velocity setting from velocityInput
+            ball.vy = -parseFloat(velocityInput.value);
+          }
+        }
+      }
+
+      /*
+      // Collision at top (no bounce)
+      if (ball.y - ball.radius < 0) {
+        ball.y = ball.radius;
+        ball.vy = 0; 
+      }
+      */
+
+      // Trail
+      ball.trail.push({ x: ball.x, y: ball.y });
+      if (ball.trail.length > 250) {
+        ball.trail.shift();
+      }
+    }
+
+    function draw() {
+      const { width, height } = resizeCanvasToDisplaySize(canvas);
+      ctx.clearRect(0, 0, width, height);
+
+      // Draw trail
+      for (let i = 0; i < ball.trail.length; i++) {
+        const pos = ball.trail[i];
+        const alpha = i / ball.trail.length;
+        ctx.fillStyle = `rgba(52, 152, 219, ${alpha * 0.5})`;
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, ball.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Draw ball
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+      ctx.fillStyle = "#3498db";
+      ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+      ctx.shadowBlur = 15;
+      ctx.shadowOffsetX = 5;
+      ctx.shadowOffsetY = 5;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.closePath();
+    }
+
+    function animationLoop() {
+      update();
+      draw();
+      requestAnimationFrame(animationLoop);
+    }
+
+    /******************************************************
+     *  5) Initialization
+     ******************************************************/
+    // Resize canvas
+    resizeCanvasToDisplaySize(canvas);
+
+    // Place ball at bottom center
+    placeBallAtBottom();
+
+    // Default "Earth" preset
+    setInputsFromPreset("Earth");
+    applyUserParameters();
+
+    // Start the animation
+    animationLoop();
+  </script>
+</body>
+</html>
