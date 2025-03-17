@@ -1,0 +1,30 @@
+
+    /* Scrollbar styling for controls */
+    #controls::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #controls::-webkit-scrollbar-track {
+      background: #34495e;
+    }
+
+    #controls::-webkit-scrollbar-thumb {
+      background-color: #2980b9;
+      border-radius: 4px;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 600px) {
+      #controls {
+        padding: 1rem;
+      }
+
+      .form-group {
+        width: 100%;
+      }
+
+      button {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
+      }
+    }
