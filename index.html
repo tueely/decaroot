@@ -1,0 +1,57 @@
+<!-- 
+TUEELY RESEARCH: BOUNCING BALL SIMULATION
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ball Simulation with Loop</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="https://tueely.com/images/favicon.png">
+  </head>
+<body>
+<canvas id="simulationCanvas"></canvas>
+
+  <!-- Controls -->
+  
+  <div id="controls">
+      <button onclick="window.location.href='https://youtube.com/'">Demo Video</button>
+      <!-- ADD LATER -->
+       <div class="button-group">
+      <button id="testBtn">Test</button>
+      <button id="resetBtn">Reset</button>
+      <button id="loopBtn">Loop Off</button>
+    </div>
+    
+    <div class="form-group">
+      <label for="presetSelect"><strong>Preset:</strong></label>
+      <select id="presetSelect">
+        <option value="Moon">Moon</option>
+        <option value="Earth" selected>Earth</option>
+        <option value="Critical Damping">Critical Damping</option>
+        <option value="Over Damping">Over Damping</option>
+        <option value="Under Damping">Under Damping</option>
+        <option value="Custom">Custom</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="gravityInput"><strong>Gravity (m/s²):</strong></label>
+      <input type="number" id="gravityInput" value="9.8" step="0.01" min="0" />
+    </div>
+
+    <div class="form-group">
+      <label for="restitutionInput"><strong>Coefficient of Restitution (CR):</strong></label>
+      <input type="number" id="restitutionInput" value="0.7" step="0.01" min="0" max="1" />
+    </div>
+
+    <div class="form-group">
+      <label for="velocityInput"><strong>Initial Vertical Velocity (m/s):</strong></label>
+      <input type="number" id="velocityInput" value="15" step="0.01" />
+    </div>
+
+   
+  </div>
+
+  </body>
+</html>
